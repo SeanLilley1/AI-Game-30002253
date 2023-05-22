@@ -19,13 +19,26 @@ MAGENTA = (255, 0, 255)
 CYAN = (0, 255, 255)
 
 SHAPES = [
+    [[1], [1], [1], [1]],
     [[1, 1, 1, 1]],
     [[1, 1], [1, 1]],
     [[1, 1, 0], [0, 1, 1]],
     [[0, 1, 1], [1, 1, 0]],
     [[1, 1, 1], [0, 1, 0]],
     [[1, 1, 1], [1, 0, 0]],
-    [[1, 1, 1], [0, 0, 1]]
+    [[1, 1, 1], [0, 0, 1]],
+    [[0, 1], [1, 1], [0, 1]],
+    [[1, 0], [1, 1], [0, 1]],
+    [[0, 1], [1, 1], [1, 0]],
+    [[0, 1], [0, 1], [1, 1]],
+    [[1, 1], [0, 1], [0, 1]],
+    [[1, 0, 0], [1, 1, 1]],
+    [[0, 1, 0], [1, 1, 1]],
+    [[1, 0], [1, 1], [1, 0]],
+    [[1, 0], [1, 1], [1, 0]],
+    [[0, 0, 1], [1, 1, 1]],
+    [[1, 0], [1, 0], [1, 1]],
+    [[1, 1], [1, 0], [1, 0]]
 ]
 
 COLOURS = [RED, GREEN, BLUE, YELLOW, MAGENTA, CYAN, WHITE]
@@ -41,14 +54,14 @@ def draw_shape(shape, offset, colour, screen):
         for col in range(len(shape[row])):
             if shape[row][col] != 0:
                 pygame.draw.rect(screen, colour, (offset[1] * CELL_SIZE + col * CELL_SIZE,
-                                                    offset[0] * CELL_SIZE + row * CELL_SIZE,
-                                                    CELL_SIZE, CELL_SIZE))
+                                                  offset[0] * CELL_SIZE + row * CELL_SIZE,
+                                                  CELL_SIZE, CELL_SIZE))
 
 def rotate_shape(shape):
     num_rows = len(shape)
     num_cols = len(shape[0])
     rotated_shape = [[0] * num_rows for _ in range(num_cols)]
-
+    
     for row in range(num_rows):
         for col in range(num_cols):
             rotated_shape[col][num_rows - 1 - row] = shape[row][col]
@@ -119,7 +132,7 @@ def game_loop():
                         current_shape = rotated_shape
 
         new_offset = [current_offset[0] + 1, current_offset[1]]
-        if not check_collision(current_shape, current_offset, grid):
+        if not check_collision(current_shape, new_offset, grid):
             current_offset = new_offset
         else:
             place_shape(current_shape, current_offset, grid)
@@ -147,7 +160,7 @@ def game_loop():
                     pygame.draw.rect(screen, COLOURS[grid[row][col] - 1],
                                      (col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE))
         
-        draw_shape(current_shape, current_offset, COLOURS[SHAPES.index(current_shape)], screen)
+        draw_shape(current_shape, current_offset, COLOURS[SHAPES.index(current_shape) % 7], screen)
 
         pygame.display.update()
 
