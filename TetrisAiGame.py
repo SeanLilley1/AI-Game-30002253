@@ -1,21 +1,26 @@
 import pygame
 import random
 
+# Initialize Pygame
 pygame.init()
 
+# Set up the game window
 window_width, window_height = 500, 600
 window = pygame.display.set_mode((window_width, window_height))
-pygame.display.set_caption("AI plays Tetris")
+pygame.display.set_caption("AI plays tetris")
 
+# Define colors
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
-RED = (255, 0, 0)
-GREEN = (0, 255, 0)
-BLUE = (0, 0, 255)
+CYAN = (0, 255, 255)
 YELLOW = (255, 255, 0)
 MAGENTA = (255, 0, 255)
-CYAN = (0, 255, 255)
+GREEN = (0, 255, 0)
+RED = (255, 0, 0)
+BLUE = (0, 0, 255)
+ORANGE = (255, 165, 0)
 
+# Define the block shapes
 SHAPES = [
     [[1, 1, 1, 1]],
     [[1, 1], [1, 1]],
@@ -26,7 +31,9 @@ SHAPES = [
     [[1, 1, 1], [0, 1, 0]],
 ]
 
-COLOURS = [RED, GREEN, BLUE, YELLOW, MAGENTA, CYAN, WHITE]
+# Define the colors for the blocks
+COLORS = [CYAN, YELLOW, MAGENTA, GREEN, RED, BLUE, ORANGE]
+
 
 class TetrisAI:
     def __init__(self):
@@ -49,16 +56,16 @@ class TetrisAI:
         for y in range(self.board_height):
             for x in range(self.board_width):
                 pygame.draw.rect(window, self.board[y][x], (x * 30, y * 30, 30, 30))
-    
+
     def draw_shape(self):
         if self.current_shape is not None:
             shape = SHAPES[self.current_shape]
             for y in range(len(shape)):
                 for x in range(len(shape[y])):
-                    if shape[x][y] == 1:
+                    if shape[y][x] == 1:
                         pygame.draw.rect(
                             window,
-                            COLOURS[self.current_shape],
+                            COLORS[self.current_shape],
                             (
                                 (self.current_shape_x + x) * 30,
                                 (self.current_shape_y + y) * 30,
@@ -85,13 +92,13 @@ class TetrisAI:
                 ):
                     return True
         return False
-    
+
     def place_shape(self):
         shape = SHAPES[self.current_shape]
         for y in range(len(shape)):
             for x in range(len(shape[y])):
                 if shape[y][x] == 1:
-                    self.board[self.current_shape_y + y][self.current_shape_x + x] = COLOURS[
+                    self.board[self.current_shape_y + y][self.current_shape_x + x] = COLORS[
                         self.current_shape
                     ]
 
@@ -104,8 +111,8 @@ class TetrisAI:
                 self.board.insert(0, [BLACK] * self.board_width)
                 lines_cleared += 1
             else:
-                y-= 1
-        self.score == lines_cleared ** 2
+                y -= 1
+        self.score += lines_cleared ** 2
 
     def update(self):
         self.current_shape_y += 1
@@ -131,58 +138,73 @@ class TetrisAI:
             self.current_shape_x <= self.board_width - len(new_shape[0])
             and not self.check_collision()
         ):
-            self.current_shape = (self.current_shape + 1) & len(SHAPES)
+            self.current_shape = (self.current_shape + 1) % len(SHAPES)
             self.current_shape_y += 1
 
     def is_game_over(self):
         return any(
-            colour != BLACK for colour in self.board[0]
-        )
-    
+            color != BLACK for color in self.board[0]
+        )  # Check if there is any colored block in the top row
+
+
+# Create the AI instance
 ai = TetrisAI()
 
+# Set up the game clock
 clock = pygame.time.Clock()
 
-AI_MOVE_DELAY = 5
-ai_move_counter = 10
+# AI Logic
+AI_MOVE_DELAY = 10  # Delay between AI moves (in frames)
+ai_move_counter = 0
 
-def game_loop():
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                return
-            
-        if ai.current_shape is None:
-            ai.current_shape = random.randint(0, len(SHAPES) - 1)
-            ai.current_shape_x = ai.board_width // 2 - len(SHAPES[ai.current_shape][0]) // 2
-            ai.current_shape_y = 0
+    # AI Logic
+AI_MOVE_DELAY = 5  # Delay between AI moves (in frames)
+ai_move_counter = 0
+
+# Game loop
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    # AI Logic
+    if ai.current_shape is None:
+        ai.current_shape = random.randint(0, len(SHAPES) - 1)
+        ai.current_shape_x = ai.board_width // 2 - len(SHAPES[ai.current_shape][0]) // 2
+        ai.current_shape_y = 0
+    else:
+        # Make AI moves every AI_MOVE_DELAY frames
+        if ai_move_counter >= AI_MOVE_DELAY:
+            # Randomly choose an action: move left, move right, rotate, or do nothing
+            action = random.choices(["left", "right", "rotate", "none"], weights=[0.4, 0.4, 0.1, 0.1], k=1)[0]
+            if action == "left":
+                ai.move_shape(-1)
+            elif action == "right":
+                ai.move_shape(1)
+            elif action == "rotate":
+                ai.rotate_shape()
+            ai_move_counter = 0
         else:
-            if ai_move_counter >= AI_MOVE_DELAY:
+            ai_move_counter += 1
 
-                action = random.choices(["left", "right", "rotate", "none"], weights=[0.4, 0.4, 0.1, 0.1], k = 1)[0]
-                if action == "left":
-                    ai.move_shape(-1)
-                elif action == "right":
-                    ai.move_shape(1)
-                elif action == "rotate":
-                    ai.rotate_shape()
-                ai_move_counter += 0
-            else:
-                ai_move_counter += 1
+    # Update game state
+    ai.update()
 
-        ai.update()
+    # Draw game board
+    window.fill(BLACK)
+    ai.draw_board()
+    ai.draw_shape()
 
-        window.fill(BLACK)
-        ai.draw_board()
-        ai.draw_shape()
+    # Check if game is over
+    if ai.is_game_over():
+        ai.reset()
 
-        if ai.is_game_over():
-            ai.reset()
-        
-        pygame.display.flip()
+    # Update the display
+    pygame.display.flip()
 
-        clock.tick(10)
+    # Control the game speed
+    clock.tick(10)
 
-
-game_loop()
+# Quit the game
+pygame.quit()
