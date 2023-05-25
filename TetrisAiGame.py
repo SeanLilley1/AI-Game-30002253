@@ -3,11 +3,9 @@ import random
 
 pygame.init()
 
-GRID_WIDTH = 10
-GRID_HEIGHT = 20
-CELL_SIZE = 30
-WINDOW_WIDTH = GRID_WIDTH * CELL_SIZE
-WINDOW_HEIGHT = GRID_HEIGHT * CELL_SIZE
+window_width, window_height = 500, 600
+window = pygame.display.set_mode((window_width, window_height))
+pygame.display.set_caption("AI plays Tetris")
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -19,151 +17,172 @@ MAGENTA = (255, 0, 255)
 CYAN = (0, 255, 255)
 
 SHAPES = [
-    [[1], [1], [1], [1]],
     [[1, 1, 1, 1]],
     [[1, 1], [1, 1]],
-    [[1, 1, 0], [0, 1, 1]],
-    [[0, 1, 1], [1, 1, 0]],
-    [[1, 1, 1], [0, 1, 0]],
-    [[1, 1, 1], [1, 0, 0]],
-    [[1, 1, 1], [0, 0, 1]],
-    [[0, 1], [1, 1], [0, 1]],
-    [[1, 0], [1, 1], [0, 1]],
-    [[0, 1], [1, 1], [1, 0]],
-    [[0, 1], [0, 1], [1, 1]],
-    [[1, 1], [0, 1], [0, 1]],
     [[1, 0, 0], [1, 1, 1]],
-    [[0, 1, 0], [1, 1, 1]],
-    [[1, 0], [1, 1], [1, 0]],
-    [[1, 0], [1, 1], [1, 0]],
     [[0, 0, 1], [1, 1, 1]],
-    [[1, 0], [1, 0], [1, 1]],
-    [[1, 1], [1, 0], [1, 0]]
+    [[0, 1, 1], [1, 1, 0]],
+    [[1, 1, 0], [0, 1, 1]],
+    [[1, 1, 1], [0, 1, 0]],
 ]
 
 COLOURS = [RED, GREEN, BLUE, YELLOW, MAGENTA, CYAN, WHITE]
 
-def draw_grid(screen):
-    for x in range(0, WINDOW_WIDTH, CELL_SIZE):
-        pygame.draw.line(screen, WHITE, (x, 0), (x, WINDOW_HEIGHT))
-    for y in range(0, WINDOW_HEIGHT, CELL_SIZE):
-        pygame.draw.line(screen, WHITE, (0, y), (WINDOW_WIDTH, y))
+class TetrisAI:
+    def __init__(self):
+        self.board_width = 10
+        self.board_height = 20
+        self.board = [[BLACK] * self.board_width for _ in range(self.board_height)]
+        self.current_shape = None
+        self.current_shape_x = 0
+        self.current_shape_y = 0
+        self.score = 0
 
-def draw_shape(shape, offset, colour, screen):
-    for row in range(len(shape)):
-        for col in range(len(shape[row])):
-            if shape[row][col] != 0:
-                pygame.draw.rect(screen, colour, (offset[1] * CELL_SIZE + col * CELL_SIZE,
-                                                  offset[0] * CELL_SIZE + row * CELL_SIZE,
-                                                  CELL_SIZE, CELL_SIZE))
+    def reset(self):
+        self.board = [[BLACK] * self.board_width for _ in range(self.board_height)]
+        self.current_shape = None
+        self.current_shape_x = 0
+        self.current_shape_y = 0
+        self.score = 0
 
-def rotate_shape(shape):
-    num_rows = len(shape)
-    num_cols = len(shape[0])
-    rotated_shape = [[0] * num_rows for _ in range(num_cols)]
+    def draw_board(self):
+        for y in range(self.board_height):
+            for x in range(self.board_width):
+                pygame.draw.rect(window, self.board[y][x], (x * 30, y * 30, 30, 30))
     
-    for row in range(num_rows):
-        for col in range(num_cols):
-            rotated_shape[col][num_rows - 1 - row] = shape[row][col]
-    
-    return rotated_shape
+    def draw_shape(self):
+        if self.current_shape is not None:
+            shape = SHAPES[self.current_shape]
+            for y in range(len(shape)):
+                for x in range(len(shape[y])):
+                    if shape[x][y] == 1:
+                        pygame.draw.rect(
+                            window,
+                            COLOURS[self.current_shape],
+                            (
+                                (self.current_shape_x + x) * 30,
+                                (self.current_shape_y + y) * 30,
+                                30,
+                                30,
+                            ),
+                        )
 
-def place_shape(shape, offset, grid):
-    for row in range(len(shape)):
-        for col in range(len(shape[row])):
-            if shape[row][col] != 0:
-                grid[offset[0] + row][offset[1] + col] = 1
-
-def check_collision(shape, offset, grid):
-    num_rows = len(shape)
-    num_cols = len(shape[0])
-
-    for row in range(num_rows):
-        for col in range(num_cols):
-            if shape[row][col] != 0:
-                if (offset[0] + row >= GRID_HEIGHT or offset[1] + col < 0 or offset[1] + col >= GRID_WIDTH or
-                        grid[offset[0] + row][offset[1] + col] != 0):
+    def check_collision(self):
+        shape = SHAPES[self.current_shape]
+        for y in range(len(shape)):
+            for x in range(len(shape[y])):
+                if (
+                    shape[y][x] == 1
+                    and (
+                        self.current_shape_x + x < 0
+                        or self.current_shape_x + x >= self.board_width
+                        or self.current_shape_y + y >= self.board_height
+                        or self.board[self.current_shape_y + y][
+                            self.current_shape_x + x
+                        ]
+                        != BLACK
+                    )
+                ):
                     return True
-    return False
+        return False
+    
+    def place_shape(self):
+        shape = SHAPES[self.current_shape]
+        for y in range(len(shape)):
+            for x in range(len(shape[y])):
+                if shape[y][x] == 1:
+                    self.board[self.current_shape_y + y][self.current_shape_x + x] = COLOURS[
+                        self.current_shape
+                    ]
 
-def remove_completed_rows(grid):
-    completed_rows = []
-    for row in range(GRID_HEIGHT):
-        if all(grid[row]):
-            completed_rows.append(row)
-            for r in range(row, 0, -1):
-                grid[r] = grid[r - 1][:]
-            grid[0] = [0] * GRID_WIDTH
-    return completed_rows
+    def check_lines(self):
+        lines_cleared = 0
+        y = self.board_height - 1
+        while y >= 0:
+            if BLACK not in self.board[y]:
+                del self.board[y]
+                self.board.insert(0, [BLACK] * self.board_width)
+                lines_cleared += 1
+            else:
+                y-= 1
+        self.score == lines_cleared ** 2
+
+    def update(self):
+        self.current_shape_y += 1
+        if self.check_collision():
+            self.current_shape_y -= 1
+            self.place_shape()
+            self.check_lines()
+            self.current_shape = None
+
+    def move_shape(self, direction):
+        new_x = self.current_shape_x + direction
+        if (
+            new_x >= 0
+            and new_x <= self.board_width - len(SHAPES[self.current_shape][0])
+            and not self.check_collision()
+        ):
+            self.current_shape_x = new_x
+
+    def rotate_shape(self):
+        old_shape = SHAPES[self.current_shape]
+        new_shape = list(zip(*old_shape[::-1]))
+        if (
+            self.current_shape_x <= self.board_width - len(new_shape[0])
+            and not self.check_collision()
+        ):
+            self.current_shape = (self.current_shape + 1) & len(SHAPES)
+            self.current_shape_y += 1
+
+    def is_game_over(self):
+        return any(
+            colour != BLACK for colour in self.board[0]
+        )
+    
+ai = TetrisAI()
+
+clock = pygame.time.Clock()
+
+AI_MOVE_DELAY = 5
+ai_move_counter = 10
 
 def game_loop():
-
-    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-    pygame.display.set_caption("Tetris")
-    clock = pygame.time.Clock()
-
-    grid = [[0] * GRID_WIDTH for _ in range(GRID_HEIGHT)]
-    current_shape = random.choice(SHAPES)
-    current_offset = [0, GRID_WIDTH // 2 - len(current_shape[0]) // 2]
-    score = 0
-
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 return
             
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_a:
-                    new_offset = [current_offset[0], current_offset[1] - 1]
-                    if not check_collision(current_shape, new_offset, grid):
-                        current_offset = new_offset
-                elif event.key == pygame.K_d:
-                    new_offset = [current_offset[0], current_offset[1] + 1]
-                    if not check_collision(current_shape, new_offset, grid):
-                        current_offset = new_offset
-                elif event.key == pygame.K_s:
-                    new_offset = [current_offset[0] + 1, current_offset[1]]
-                    if not check_collision(current_shape, new_offset, grid):
-                        current_offset = new_offset
-                elif event.key == pygame.K_r:
-                    rotated_shape = rotate_shape(current_shape)
-                    if not check_collision(rotated_shape, current_offset, grid):
-                        current_shape = rotated_shape
-
-        new_offset = [current_offset[0] + 1, current_offset[1]]
-        if not check_collision(current_shape, new_offset, grid):
-            current_offset = new_offset
+        if ai.current_shape is None:
+            ai.current_shape = random.randint(0, len(SHAPES) - 1)
+            ai.current_shape_x = ai.board_width // 2 - len(SHAPES[ai.current_shape][0]) // 2
+            ai.current_shape_y = 0
         else:
-            place_shape(current_shape, current_offset, grid)
+            if ai_move_counter >= AI_MOVE_DELAY:
 
-            completed_rows = remove_completed_rows(grid)
-            if completed_rows:
-                score += len(completed_rows)
+                action = random.choices(["left", "right", "rotate", "none"], weights=[0.4, 0.4, 0.1, 0.1], k = 1)[0]
+                if action == "left":
+                    ai.move_shape(-1)
+                elif action == "right":
+                    ai.move_shape(1)
+                elif action == "rotate":
+                    ai.rotate_shape()
+                ai_move_counter += 0
+            else:
+                ai_move_counter += 1
 
-            if any(grid[0]):
-                print("GAME OVER")
-                print("YOUR SCORE: ", score)
-                pygame.quit()
-                return
-            
-            current_shape = random.choice(SHAPES)
-            current_offset = [0, GRID_WIDTH // 2 - len(current_shape[0]) // 2]
+        ai.update()
 
-        screen.fill(BLACK)
+        window.fill(BLACK)
+        ai.draw_board()
+        ai.draw_shape()
 
-        draw_grid(screen)
-
-        for row in range(GRID_HEIGHT):
-            for col in range(GRID_WIDTH):
-                if grid[row][col] != 0:
-                    pygame.draw.rect(screen, COLOURS[grid[row][col] - 1],
-                                     (col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+        if ai.is_game_over():
+            ai.reset()
         
-        draw_shape(current_shape, current_offset, COLOURS[SHAPES.index(current_shape) % 7], screen)
+        pygame.display.flip()
 
-        pygame.display.update()
+        clock.tick(10)
 
-        clock.tick(5)
 
 game_loop()
